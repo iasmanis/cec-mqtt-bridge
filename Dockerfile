@@ -7,8 +7,8 @@ WORKDIR /root
 
 ADD https://github.com/Pulse-Eight/libcec/archive/libcec-${LIBCEC_VERSION}.tar.gz https://github.com/Pulse-Eight/platform/archive/p8-platform-${P8_PLATFORM_VERSION}.tar.gz ./
 
-RUN apt-get -qqy update \
-    && apt-get -qqy install cmake libudev-dev libxrandr-dev python3-dev swig build-essential \
+RUN apt-get -y update \
+    && apt-get -y install cmake libudev-dev libxrandr-dev python3-dev swig build-essential \
     && rm -rf /var/cache/apk/* \
     # Userland
     && curl -L https://api.github.com/repos/raspberrypi/userland/tarball | tar xvz \
@@ -43,7 +43,7 @@ RUN apt-get -qqy update \
     # Cleanup
     && cd \
     && rm -rf platform libcec raspberrypi-userland* \
-    && apt-get -qqy purge cmake libudev-dev libxrandr-dev python3-dev swig
+    && apt-get -y purge cmake libudev-dev libxrandr-dev python3-dev swig build-essential
 
 ENV LD_LIBRARY_PATH=/opt/vc/lib:${LD_LIBRARY_PATH} PYTHONPATH=${PYTHONPATH}/usr/lib/python3.6/site-packages
 
