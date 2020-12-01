@@ -5,21 +5,19 @@ ENV LIBCEC_VERSION=4.0.5 P8_PLATFORM_VERSION=2.1.0.1
 
 WORKDIR /root
 
+COPY ./assets /usr/src/app
+
 ADD https://github.com/Pulse-Eight/libcec/archive/libcec-${LIBCEC_VERSION}.tar.gz https://github.com/Pulse-Eight/platform/archive/p8-platform-${P8_PLATFORM_VERSION}.tar.gz ./
 
 RUN apt-get -y update \
-    && apt-get -y install cmake libudev-dev libxrandr-dev python3-dev swig build-essential \
+    && apt-get -y install cmake libudev-dev libxrandr-dev swig build-essential libxrandr2 liblircclient-dev \
     && rm -rf /var/cache/apk/* \
     # Userland
     && curl -L https://api.github.com/repos/raspberrypi/userland/tarball | tar xvz \
     && cd raspberrypi-userland* \
     && ./buildme \
-    # Platform
-    && PYTHON_LIBDIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("LIBDIR"))') \
-    && PYTHON_LDLIBRARY=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("LDLIBRARY"))') \
-    && PYTHON_LIBRARY="${PYTHON_LIBDIR}/${PYTHON_LDLIBRARY}" \
-    && PYTHON_INCLUDE_DIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_python_inc())') \
-    && cd \
+    # P8 platform
+    && cd /root \
     && tar xvzf p8-platform-${P8_PLATFORM_VERSION}.tar.gz && rm p8-platform-*.tar.gz && mv platform* platform \
     && mkdir platform/build \
     && cd platform/build \
@@ -28,7 +26,15 @@ RUN apt-get -y update \
     && make \
     && make install \
     # Libcec
-    && cd \
+    && cd /root \
+    && export PYTHON_LIBDIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("LIBDIR"))') \
+    && export PYTHON_LDLIBRARY=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("LDLIBRARY"))') \
+    && export PYTHON_LIBRARY="${PYTHON_LIBDIR}/${PYTHON_LDLIBRARY}" \
+    && export PYTHON_INCLUDE_DIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_python_inc())') \
+    && echo "PYTHON_LIBDIR = $PYTHON_LIBDIR" \
+    && echo "PYTHON_LDLIBRARY = $PYTHON_LDLIBRARY" \
+    && echo "PYTHON_LIBRARY = $PYTHON_LIBRARY" \
+    && echo "PYTHON_INCLUDE_DIR = $PYTHON_INCLUDE_DIR" \
     && tar xvzf libcec-${LIBCEC_VERSION}.tar.gz && rm libcec-*.tar.gz && mv libcec* libcec \
     && mkdir libcec/build \
     && cd libcec/build \
@@ -40,20 +46,17 @@ RUN apt-get -y update \
     .. \
     && make -j4 \
     && make install \
+    # App requirements
+    && cd /usr/src/app \
+    && pip install -r requirements.txt \
     # Cleanup
-    && cd \
+    && cd /root \
+    && rm -rf /var/lib/apt/lists/* \
     && rm -rf platform libcec raspberrypi-userland* \
     && apt-get -y purge cmake libudev-dev libxrandr-dev python3-dev swig build-essential
 
-ENV LD_LIBRARY_PATH=/opt/vc/lib:${LD_LIBRARY_PATH} PYTHONPATH=${PYTHONPATH}/usr/lib/python3.6/site-packages
-
-COPY ./assets /usr/src/app
+ENV LD_LIBRARY_PATH=/opt/vc/lib:${LD_LIBRARY_PATH} PYTHONPATH=${PYTHONPATH}/usr/lib/python3.6/dist-packages
 
 WORKDIR /usr/src/app
-
-RUN apt-get update \
-    && apt-get install -qqy libxrandr2 liblircclient-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip install -r requirements.txt
 
 CMD ["python", "bridge.py"]
