@@ -29,6 +29,7 @@ config = {
     }
 }
 
+
 def mqtt_on_connect(client, userdata, rc):
     """@type client: paho.mqtt.client """
 
@@ -37,15 +38,15 @@ def mqtt_on_connect(client, userdata, rc):
     # Subscribe to CEC commands
     if int(config['cec']['enabled']) == 1:
         client.subscribe([
-          (config['mqtt']['prefix'] + '/cec/cmd', 0),
-          (config['mqtt']['prefix'] + '/cec/+/cmd', 0),
-          (config['mqtt']['prefix'] + '/cec/tx', 0)
+            (config['mqtt']['prefix'] + '/cec/cmd', 0),
+            (config['mqtt']['prefix'] + '/cec/+/cmd', 0),
+            (config['mqtt']['prefix'] + '/cec/tx', 0)
         ])
 
     # Subscribe to IR commands
     if int(config['ir']['enabled']) == 1:
         client.subscribe([
-          (config['mqtt']['prefix'] + '/ir/+/tx', 0)
+            (config['mqtt']['prefix'] + '/ir/+/tx', 0)
         ])
 
 
@@ -98,13 +99,15 @@ def mqtt_on_message(client, userdata, message):
                 if action == 'on':
                     id = int(split[1])
                     cec_send('44:6D', id=id)
-                    mqtt_send(config['mqtt']['prefix'] + '/cec/' + str(id), 'on', True)
+                    mqtt_send(config['mqtt']['prefix'] +
+                              '/cec/' + str(id), 'on', True)
                     return
 
                 if action == 'off':
                     id = int(split[1])
                     cec_send('36', id=id)
-                    mqtt_send(config['mqtt']['prefix'] + '/cec/' + str(id), 'off', True)
+                    mqtt_send(config['mqtt']['prefix'] +
+                              '/cec/' + str(id), 'off', True)
                     return
 
                 raise Exception("Unknown command (%s)" % action)
@@ -118,7 +121,8 @@ def mqtt_on_message(client, userdata, message):
                 return
 
     except Exception as e:
-        print("Error during processing of message: ", message.topic, message.payload, str(e))
+        print("Error during processing of message: ",
+              message.topic, message.payload, str(e))
 
 
 def mqtt_send(topic, value, retain=False):
@@ -143,7 +147,8 @@ def cec_on_message(level, time, message):
                 power = 'on'
             else:
                 power = 'off'
-            mqtt_send(config['mqtt']['prefix'] + '/cec/' + str(id), power, True)
+            mqtt_send(config['mqtt']['prefix'] +
+                      '/cec/' + str(id), power, True)
             return
 
         # Device Vendor ID
@@ -151,7 +156,8 @@ def cec_on_message(level, time, message):
         if m:
             id = int(m.group(1), 16)
             power = 'on'
-            mqtt_send(config['mqtt']['prefix'] + '/cec/' + str(id), power, True)
+            mqtt_send(config['mqtt']['prefix'] +
+                      '/cec/' + str(id), power, True)
             return
 
         # Report Physical Address
@@ -159,7 +165,8 @@ def cec_on_message(level, time, message):
         if m:
             id = int(m.group(1), 16)
             power = 'on'
-            mqtt_send(config['mqtt']['prefix'] + '/cec/' + str(id), power, True)
+            mqtt_send(config['mqtt']['prefix'] +
+                      '/cec/' + str(id), power, True)
             return
 
 
@@ -167,7 +174,8 @@ def cec_send(cmd, id=None):
     if id is None:
         cec_client.Transmit(cec_client.CommandFromString(cmd))
     else:
-        cec_client.Transmit(cec_client.CommandFromString('1%s:%s' % (hex(id)[2:], cmd)))
+        cec_client.Transmit(cec_client.CommandFromString(
+            '1%s:%s' % (hex(id)[2:], cmd)))
 
 
 def ir_listen_thread():
@@ -218,8 +226,8 @@ try:
 
         # Environment variables
         for section in config:
-            for key,value in config[section].items():
-                env = os.getenv(section.upper() + '_' + key.upper());
+            for key, value in config[section].items():
+                env = os.getenv(section.upper() + '_' + key.upper())
                 if env:
                     config[section][key] = type(value)(env)
 
@@ -238,9 +246,9 @@ try:
         try:
             import cec
             cec_config = cec.libcec_configuration()
-            cec_config.strDeviceName = "cec-ir-mqtt"
+            cec_config.strDeviceName = "DomoAudio"
             cec_config.bActivateSource = 0
-            cec_config.deviceTypes.Add(cec.CEC_DEVICE_TYPE_RECORDING_DEVICE)
+            cec_config.deviceTypes.Add(cec.CEC_DEVICE_TYPE_AUDIO_SYSTEM)
             cec_config.clientVersion = cec.LIBCEC_VERSION_CURRENT
             cec_config.SetLogCallback(cec_on_message)
             cec_client = cec.ICECAdapter.Create(cec_config)
@@ -252,14 +260,14 @@ try:
 
     ### Setup IR ###
     if int(config['ir']['enabled']) == 1:
-        print( "Initialising IR...")
+        print("Initialising IR...")
         try:
             import lirc
             lirc.init("cec-ir-mqtt", "lircrc", blocking=False)
             lirc_thread = threading.Thread(target=ir_listen_thread)
             lirc_thread.start()
         except Exception as e:
-            print( "ERROR: Could not initialise IR:", str(e))
+            print("ERROR: Could not initialise IR:", str(e))
             exit(1)
 
     ### Setup MQTT ###
@@ -268,7 +276,8 @@ try:
     mqtt_client.on_connect = mqtt_on_connect
     mqtt_client.on_message = mqtt_on_message
     if config['mqtt']['user']:
-        mqtt_client.username_pw_set(config['mqtt']['user'], password=config['mqtt']['password']);
+        mqtt_client.username_pw_set(
+            config['mqtt']['user'], password=config['mqtt']['password'])
     mqtt_client.connect(config['mqtt']['broker'], config['mqtt']['port'], 60)
     mqtt_client.loop_start()
 
