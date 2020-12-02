@@ -4,7 +4,7 @@ ENV LIBCEC_VERSION=4.0.5 P8_PLATFORM_VERSION=2.1.0.1
 
 WORKDIR /root
 
-COPY ./assets/requirements.txt /opt/app/
+# COPY ./assets/requirements.txt /opt/app/
 
 ADD https://github.com/Pulse-Eight/libcec/archive/libcec-${LIBCEC_VERSION}.tar.gz https://github.com/Pulse-Eight/platform/archive/p8-platform-${P8_PLATFORM_VERSION}.tar.gz ./
 
@@ -45,17 +45,11 @@ RUN cd /root \
     .. \
     && make -j4 \
     && make install DESTDIR=/opt/libcec
-# App requirements
-RUN cd /opt/app \
-    && pip install -r requirements.txt
+# # App requirements
+# RUN cd /opt/app \
+#     && pip install -r requirements.txt
 
 FROM balenalib/armv7hf-debian-python:3.6-bullseye-run
-
-COPY ./assets /app
-COPY --from=builder /usr/local/lib/python3.6/site-packages /usr/local/lib/python3.6/site-packages
-# COPY --from=builder /opt/vc/lib
-COPY --from=builder /opt/libcec /
-# COPY --from=builder /tmp/p8-platform
 
 RUN apt-get -y update \
     && apt-get -y install bash libxrandr2 liblircclient-dev \
@@ -63,10 +57,18 @@ RUN apt-get -y update \
     && mv /usr/lib/python3.6/dist-packages/*  \
     && uname -a
 
+COPY --from=builder /usr/local/lib/python3.6/site-packages /usr/local/lib/python3.6/site-packages
+# COPY --from=builder /opt/vc/lib
+COPY --from=builder /opt/libcec /
+# COPY --from=builder /tmp/p8-platform
+
+COPY ./assets/requirements.txt /app/
+WORKDIR /app
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ./assets /app
 
 # ENV LD_LIBRARY_PATH=/opt/vc/lib:${LD_LIBRARY_PATH}
 # ENV PYTHONPATH=${PYTHONPATH}/usr/lib/python3.6/dist-packages
-
-WORKDIR /app
 
 CMD ["python", "bridge.py"]
