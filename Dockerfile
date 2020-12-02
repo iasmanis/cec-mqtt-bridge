@@ -64,4 +64,4 @@ COPY ./assets /app
 
 ENV PYTHONPATH=${PYTHONPATH}/usr/lib/python3.6/dist-packages
 
-CMD ["python3", "bridge.py"]
+CMD ["python3", "-u", "bridge.py" ]
