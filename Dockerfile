@@ -2,8 +2,7 @@ FROM balenalib/armv7hf-debian-python:3.6-bullseye AS builder
 
 ENV LIBCEC_VERSION=4.0.5 P8_PLATFORM_VERSION=2.1.0.1
 
-
-ADD https://github.com/Pulse-Eight/libcec/archive/libcec-${LIBCEC_VERSION}.tar.gz https://github.com/Pulse-Eight/platform/archive/p8-platform-${P8_PLATFORM_VERSION}.tar.gz ./
+ADD https://github.com/Pulse-Eight/libcec/archive/libcec-${LIBCEC_VERSION}.tar.gz https://github.com/Pulse-Eight/platform/archive/p8-platform-${P8_PLATFORM_VERSION}.tar.gz /root/
 
 RUN apt-get -y update \
     && apt-get -y install cmake libudev-dev libxrandr-dev swig build-essential libxrandr2 liblircclient-dev \
@@ -42,30 +41,27 @@ RUN cd /root \
     .. \
     && make -j4 \
     && make install DESTDIR=/opt/libcec
-# # App requirements
-# RUN cd /opt/app \
-#     && pip install -r requirements.txt
+
+COPY ./assets/requirements.txt /app/
+
+RUN cd /app \
+    && pip install --no-cache-dir -r requirements.txt
+
 
 FROM balenalib/armv7hf-debian-python:3.6-bullseye-run
 
 RUN apt-get -y update \
     && apt-get -y install bash libxrandr2 liblircclient-dev \
-    && rm -rf /var/cache/apk/* \
-    && mv /usr/lib/python3.6/dist-packages/*  \
-    && uname -a
+    && rm -rf /var/cache/apk/*
 
 COPY --from=builder /usr/local/lib/python3.6/site-packages /usr/local/lib/python3.6/site-packages
-# COPY --from=builder /opt/vc/lib
+COPY --from=builder /opt/vc/lib /usr/lib/arm-linux-gnueabihf/
 COPY --from=builder /opt/libcec /
-# COPY --from=builder /tmp/p8-platform
 
-COPY ./assets/requirements.txt /app/
 WORKDIR /app
-RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./assets /app
 
-# ENV LD_LIBRARY_PATH=/opt/vc/lib:${LD_LIBRARY_PATH}
-# ENV PYTHONPATH=${PYTHONPATH}/usr/lib/python3.6/dist-packages
+ENV PYTHONPATH=${PYTHONPATH}/usr/lib/python3.6/dist-packages
 
 CMD ["python3", "bridge.py"]
