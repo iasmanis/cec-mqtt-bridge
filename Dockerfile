@@ -1,32 +1,31 @@
-FROM balenalib/armv7hf-debian-python:3.6-bullseye
-#
+FROM balenalib/armv7hf-debian-python:3.6-bullseye AS builder
 
 ENV LIBCEC_VERSION=4.0.5 P8_PLATFORM_VERSION=2.1.0.1
 
 WORKDIR /root
 
-COPY ./assets /usr/src/app
+COPY ./assets/requirements.txt /opt/app/
 
 ADD https://github.com/Pulse-Eight/libcec/archive/libcec-${LIBCEC_VERSION}.tar.gz https://github.com/Pulse-Eight/platform/archive/p8-platform-${P8_PLATFORM_VERSION}.tar.gz ./
 
 RUN apt-get -y update \
     && apt-get -y install cmake libudev-dev libxrandr-dev swig build-essential libxrandr2 liblircclient-dev \
-    && rm -rf /var/cache/apk/* \
-    # Userland
-    && curl -L https://api.github.com/repos/raspberrypi/userland/tarball | tar xvz \
+    && rm -rf /var/cache/apk/*
+# Userland
+RUN curl -L https://api.github.com/repos/raspberrypi/userland/tarball | tar xvz \
     && cd raspberrypi-userland* \
-    && ./buildme \
-    # P8 platform
-    && cd /root \
+    && ./buildme
+# P8 platform
+RUN cd /root \
     && tar xvzf p8-platform-${P8_PLATFORM_VERSION}.tar.gz && rm p8-platform-*.tar.gz && mv platform* platform \
     && mkdir platform/build \
     && cd platform/build \
     && cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr \
     .. \
     && make \
-    && make install \
-    # Libcec
-    && cd /root \
+    && make install
+# Libcec
+RUN cd /root \
     && export PYTHON_LIBDIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("LIBDIR"))') \
     && export PYTHON_LDLIBRARY=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("LDLIBRARY"))') \
     && export PYTHON_LIBRARY="${PYTHON_LIBDIR}/${PYTHON_LDLIBRARY}" \
@@ -45,18 +44,29 @@ RUN apt-get -y update \
     -DPYTHON_INCLUDE_DIR="${PYTHON_INCLUDE_DIR}" \
     .. \
     && make -j4 \
-    && make install \
-    # App requirements
-    && cd /usr/src/app \
-    && pip install -r requirements.txt \
-    # Cleanup
-    && cd /root \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -rf platform libcec raspberrypi-userland* \
-    && apt-get -y purge cmake libudev-dev libxrandr-dev python3-dev swig build-essential
+    && make install DESTDIR=/opt/libcec
+# App requirements
+RUN cd /opt/app \
+    && pip install -r requirements.txt
 
-ENV LD_LIBRARY_PATH=/opt/vc/lib:${LD_LIBRARY_PATH} PYTHONPATH=${PYTHONPATH}/usr/lib/python3.6/dist-packages
+FROM balenalib/armv7hf-debian-python:3.6-bullseye-run
 
-WORKDIR /usr/src/app
+COPY ./assets /app
+COPY --from=builder /usr/local/lib/python3.6/site-packages /usr/local/lib/python3.6/site-packages
+# COPY --from=builder /opt/vc/lib
+COPY --from=builder /opt/libcec /
+# COPY --from=builder /tmp/p8-platform
+
+RUN apt-get -y update \
+    && apt-get -y install bash libxrandr2 liblircclient-dev \
+    && rm -rf /var/cache/apk/* \
+    && mv /usr/lib/python3.6/dist-packages/*  \
+    && uname -a
+
+
+# ENV LD_LIBRARY_PATH=/opt/vc/lib:${LD_LIBRARY_PATH}
+# ENV PYTHONPATH=${PYTHONPATH}/usr/lib/python3.6/dist-packages
+
+WORKDIR /app
 
 CMD ["python", "bridge.py"]
