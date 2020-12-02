@@ -71,4 +71,4 @@ COPY ./assets /app
 # ENV LD_LIBRARY_PATH=/opt/vc/lib:${LD_LIBRARY_PATH}
 # ENV PYTHONPATH=${PYTHONPATH}/usr/lib/python3.6/dist-packages
 
-CMD ["python", "bridge.py"]
+CMD ["python3", "bridge.py"]
