@@ -2,9 +2,6 @@ FROM balenalib/armv7hf-debian-python:3.6-bullseye AS builder
 
 ENV LIBCEC_VERSION=4.0.5 P8_PLATFORM_VERSION=2.1.0.1
 
-WORKDIR /root
-
-# COPY ./assets/requirements.txt /opt/app/
 
 ADD https://github.com/Pulse-Eight/libcec/archive/libcec-${LIBCEC_VERSION}.tar.gz https://github.com/Pulse-Eight/platform/archive/p8-platform-${P8_PLATFORM_VERSION}.tar.gz ./
 
