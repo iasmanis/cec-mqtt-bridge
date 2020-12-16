@@ -177,7 +177,9 @@ try:
             cec_client = cec.ICECAdapter.Create(cec_config)
             if not cec_client.Open(config['cec']['port']):
                 raise Exception("Could not connect to cec adapter")
+            # Set system audio status = On
             cec_send("50:72:01:00")
+            # System audio mode status = On
             cec_send("50:7E:01:00")
         except Exception as e:
             print("ERROR: Could not initialise CEC:", str(e))

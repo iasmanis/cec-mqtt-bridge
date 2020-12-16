@@ -16,8 +16,7 @@ RUN cd /root \
     && tar xvzf p8-platform-${P8_PLATFORM_VERSION}.tar.gz && rm p8-platform-*.tar.gz && mv platform* platform \
     && mkdir platform/build \
     && cd platform/build \
-    && cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr \
-    .. \
+    && cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr .. \
     && make \
     && make install
 # Libcec
