@@ -32,15 +32,24 @@ def mqtt_send(topic, value, retain=False):
     mqtt_client.publish(topic, value, retain=retain)
 
 
-def cec_on_keypress(self, key, duration):
-    print("[key pressed] " + str(key))
+def cec_on_keypress(key, duration):
+    print("[key pressed] " + str(key) + ", "+ str(duration))
     return 0
 
 
-def cec_command_callback(self, cmd):
-    print("[command_callback] " + str(cmd))
+def cec_command_callback(cmd):
+    print("CEC RX: " + str(cmd))
+
+    if cmd == ">> 05:c3":
+        print("CCC: request ARC start (C3)")
+        print("CCC: Reporting ARC started (C1)")
+        cec_send("50:C1")
+        return 1
+
     return 0
 
+def cec_alert_callback(alert, param):
+    print("CEC ALERT: " + str(alert) + ", " + str(param))
 
 def cec_on_message(level, time, message):
     if level == cec.CEC_LOG_ERROR:
@@ -57,20 +66,21 @@ def cec_on_message(level, time, message):
 
     if level == cec.CEC_LOG_TRAFFIC:
 
-        m = re.search('>> ([0-9a-f:]+)', message)
-        if m:
-            print("CEC RX: %s" % m.group(1))
-        else:
-            m = re.search('<< ([0-9a-f:]+)', message)
-            if m:
-                print("CEC TX: %s" % m.group(1))
+        # m = re.search('>> ([0-9a-f:]+)', message)
+        # if m:
+        #   print("CEC RX: %s" % m.group(1))
 
-        m = re.search('>> 05:c3', message)
+        m = re.search('<< ([0-9a-f:]+)', message)
         if m:
-            print("request ARC start (C3)")
-            print("Reporting ARC started (C1)")
-            cec_send("50:C1")
+            print("CEC TX: %s" % m.group(1))
 
+        # m = re.search('>> 05:c3', message)
+        # if m:
+        #     print("request ARC start (C3)")
+        #     print("Reporting ARC started (C1)")
+        #     cec_send("50:C1")
+
+        # TODO: Move to command callback
         m = re.search('>> [0-9a-f]{2}:44:([0-9a-f]{2})', message)
         if m:
             handleKeyPress(m.group(1))
@@ -193,6 +203,7 @@ try:
             cec_config.SetLogCallback(cec_on_message)
             cec_config.SetKeyPressCallback(cec_on_keypress)
             cec_config.SetCommandCallback(cec_command_callback)
+            cec_config.SetAlertCallback(cec_alert_callback)
             cec_client = cec.ICECAdapter.Create(cec_config)
             if not cec_client.Open(config['cec']['port']):
                 raise Exception("Could not connect to cec adapter")
