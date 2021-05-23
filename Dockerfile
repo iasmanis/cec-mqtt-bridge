@@ -2,7 +2,9 @@ FROM balenalib/armv7hf-debian-python:3.6-bullseye AS builder
 
 ENV LIBCEC_VERSION=6.0.2 P8_PLATFORM_VERSION=2.1.0.1
 
-ADD https://github.com/Pulse-Eight/libcec/archive/libcec-${LIBCEC_VERSION}.tar.gz https://github.com/Pulse-Eight/platform/archive/p8-platform-${P8_PLATFORM_VERSION}.tar.gz /root/
+# ADD https://github.com/Pulse-Eight/libcec/archive/libcec-${LIBCEC_VERSION}.tar.gz https://github.com/Pulse-Eight/platform/archive/p8-platform-${P8_PLATFORM_VERSION}.tar.gz /root/
+
+ADD https://github.com/Pulse-Eight/platform/archive/p8-platform-${P8_PLATFORM_VERSION}.tar.gz /root/
 
 RUN apt-get -y update \
     && apt-get -y install cmake libudev-dev libxrandr-dev swig build-essential libxrandr2 liblircclient-dev \
@@ -19,6 +21,18 @@ RUN cd /root \
     && cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr .. \
     && make \
     && make install
+
+# HDMI-ARC specific support library
+RUN apt-get -y update \
+    && apt-get -y install git \
+    && cd /root \
+    && git clone https://github.com/iasmanis/libcec.git \
+    && cd libcec \
+    && git checkout hdmi-arc \
+    && git archive --format=tar.gz -o /root/libcec.tar.gz HEAD \
+    && rm -rf /root/libcec \
+    && apt-get -y purge git
+
 # Libcec
 RUN cd /root \
     && export PYTHON_LIBDIR=$(python -c 'from distutils import sysconfig; print(sysconfig.get_config_var("LIBDIR"))') \
@@ -29,7 +43,7 @@ RUN cd /root \
     && echo "PYTHON_LDLIBRARY = $PYTHON_LDLIBRARY" \
     && echo "PYTHON_LIBRARY = $PYTHON_LIBRARY" \
     && echo "PYTHON_INCLUDE_DIR = $PYTHON_INCLUDE_DIR" \
-    && tar xvzf libcec-${LIBCEC_VERSION}.tar.gz && rm libcec-*.tar.gz && mv libcec* libcec \
+    && mkdir libcec && cd libcec && tar -xvzf ../libcec.tar.gz && cd .. && rm libcec.tar.gz \
     && mkdir libcec/build \
     && cd libcec/build \
     && cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr \
