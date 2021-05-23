@@ -42,8 +42,8 @@ def cec_command_callback(cmd):
 
     if cmd == ">> 05:c3":
         print("CCC: request ARC start (C3)")
-        print("CCC: Reporting ARC started (C1)")
-        cec_send("50:C1")
+        # print("CCC: Reporting ARC started (C1)")
+        # cec_send("50:C1")
         return 1
 
     return 0
