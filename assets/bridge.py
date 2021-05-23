@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import signal
 import paho.mqtt.client as mqtt
 import subprocess
 import time
@@ -26,11 +27,20 @@ config = {
     }
 }
 
+
 def mqtt_send(topic, value, retain=False):
     mqtt_client.publish(topic, value, retain=retain)
 
+
 def cec_on_keypress(self, key, duration):
     print("[key pressed] " + str(key))
+    return 0
+
+
+def cec_command_callback(self, cmd):
+    print("[command_callback] " + str(cmd))
+    return 0
+
 
 def cec_on_message(level, time, message):
     if level == cec.CEC_LOG_ERROR:
@@ -44,7 +54,6 @@ def cec_on_message(level, time, message):
 
     if level == cec.CEC_LOG_DEBUG:
         print("CEC_LOG_DEBUG: %s" % message)
-
 
     if level == cec.CEC_LOG_TRAFFIC:
 
@@ -65,18 +74,23 @@ def cec_on_message(level, time, message):
         m = re.search('>> [0-9a-f]{2}:44:([0-9a-f]{2})', message)
         if m:
             handleKeyPress(m.group(1))
-            return
+            return 0
 
         m = re.search('>> [0-9a-f]{2}:8b:([0-9a-f]{2})', message)
         if m:
             handleKeyRelease(m.group(1))
-            return
+            return 0
+
+    return 0
+
 
 def cec_send(cmd, id=None):
     if id is None:
         cec_client.Transmit(cec_client.CommandFromString(cmd))
     else:
-        cec_client.Transmit(cec_client.CommandFromString('1%s:%s' % (hex(id)[2:], cmd)))
+        cec_client.Transmit(cec_client.CommandFromString(
+            '1%s:%s' % (hex(id)[2:], cmd)))
+
 
 def translateKey(key):
     localKey = None
@@ -90,14 +104,16 @@ def translateKey(key):
 
     return localKey
 
+
 def handleKeyPress(key):
     remoteKey = translateKey(key)
 
     if remoteKey == None:
         return
 
-    print("Sending key press "+ remoteKey + " to MQTT")
+    print("Sending key press " + remoteKey + " to MQTT")
     mqtt_send(config['mqtt']['prefix'] + '/cec/' + remoteKey, 'on', True)
+
 
 def handleKeyRelease(key):
     remoteKey = translateKey(key)
@@ -105,8 +121,9 @@ def handleKeyRelease(key):
     if remoteKey == None:
         return
 
-    print("Sending key release "+ remoteKey + " to MQTT")
+    print("Sending key release " + remoteKey + " to MQTT")
     mqtt_send(config['mqtt']['prefix'] + '/cec/' + remoteKey, 'off', True)
+
 
 def cec_refresh():
     try:
@@ -121,17 +138,18 @@ def cleanup():
     mqtt_client.loop_stop()
     mqtt_client.disconnect()
 
-import signal
-import time
 
 class GracefulKiller:
     kill_now = False
+
     def __init__(self):
         signal.signal(signal.SIGINT, self.exit_gracefully)
         signal.signal(signal.SIGTERM, self.exit_gracefully)
 
-    def exit_gracefully(self,signum, frame):
+    def exit_gracefully(self, signum, frame):
         self.kill_now = True
+
+
 try:
     ### Parse config ###
     killer = GracefulKiller()
@@ -146,7 +164,7 @@ try:
         # Environment variables
         for section in config:
             for key, value in config[section].items():
-                env = os.getenv(section.upper() + '_' + key.upper());
+                env = os.getenv(section.upper() + '_' + key.upper())
                 if env:
                     config[section][key] = type(value)(env)
 
@@ -174,6 +192,7 @@ try:
             cec_config.clientVersion = cec.LIBCEC_VERSION_CURRENT
             cec_config.SetLogCallback(cec_on_message)
             cec_config.SetKeyPressCallback(cec_on_keypress)
+            cec_config.SetCommandCallback(cec_command_callback)
             cec_client = cec.ICECAdapter.Create(cec_config)
             if not cec_client.Open(config['cec']['port']):
                 raise Exception("Could not connect to cec adapter")
@@ -189,8 +208,10 @@ try:
     print("Initialising MQTT...")
     mqtt_client = mqtt.Client("cec-ir-mqtt")
     if config['mqtt']['user']:
-        mqtt_client.username_pw_set(config['mqtt']['user'], password=config['mqtt']['password']);
-    mqtt_client.connect(config['mqtt']['broker'], int(config['mqtt']['port']), 60)
+        mqtt_client.username_pw_set(
+            config['mqtt']['user'], password=config['mqtt']['password'])
+    mqtt_client.connect(config['mqtt']['broker'],
+                        int(config['mqtt']['port']), 60)
     mqtt_client.loop_start()
 
     print("Starting main loop...")
