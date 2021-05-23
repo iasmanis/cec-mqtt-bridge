@@ -40,11 +40,13 @@ def cec_on_keypress(key, duration):
 def cec_command_callback(cmd):
     print("CEC RX: " + str(cmd))
 
-    if cmd == ">> 05:c3":
-        print("CCC: request ARC start (C3)")
+    # if cmd == ">> 05:c3":
+    #     print("CCC: request ARC start (C3)")
+    #     # This will never work as the response is sent after
+        # local libcec response buffer is processed, so there is a mixup with order and states
         # print("CCC: Reporting ARC started (C1)")
         # cec_send("50:C1")
-        return 1
+        # return 1
 
     return 0
 
