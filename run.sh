@@ -4,11 +4,11 @@
 
 docker stop  mqtt-audio-controller > /dev/null && docker rm mqtt-audio-controller > /dev/null
 
+set -e
+
 if [[ "$1" == "--pull" ]]; then
     docker pull ingemars/mqtt-audio-controller
 fi
-
-set -e
 
 docker run -d --privileged \
     --name mqtt-audio-controller \
