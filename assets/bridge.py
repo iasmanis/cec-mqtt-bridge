@@ -31,6 +31,11 @@ def mqtt_send(topic, value, retain=False):
 
 def cec_on_keypress(key, duration):
     print("CEC_KEYPRESS: " + str(key) + ", "+ str(duration))
+
+    if (duration == 0):
+        # This is a keypress down
+        handleKeyPress(key)
+
     return 0
 
 def cec_command_callback(cmd):
@@ -46,19 +51,6 @@ def cec_command_callback(cmd):
     m = re.search('>> ([0-9a-f])[0-9a-f]:84', cmd)
     if m:
         handlePowerReport(int(m.group(1), 16), 'on')
-
-    # TODO: Move to keypress callback
-    # volume up / down key press
-    m = re.search('>> [0-9a-f]{2}:44:([0-9a-f]{2})', message)
-    if m:
-        handleKeyPress(m.group(1))
-        return 0
-
-    # volume up / down key release
-    # m = re.search('>> [0-9a-f]{2}:8b:([0-9a-f]{2})', message)
-    # if m:
-    #     handleKeyRelease(m.group(1))
-    #     return 0
 
     return 0
 
@@ -101,11 +93,11 @@ def cec_send(cmd, id=None):
 def translateKey(key):
     localKey = None
 
-    if key == "41":
+    if key == 65:
         localKey = "volumeup"
-    elif key == "42":
+    elif key == 66:
         localKey = "volumedown"
-    elif key == "43":
+    elif key == 67:
         localKey = "volumemute"
 
     return localKey
@@ -122,6 +114,7 @@ def handleKeyPress(key):
 
 def handlePowerReport(device_id, power):
     # TODO: Filter out only monitored devices
+    print("MQTT: Sending power state of " + str(device_id) + " " + power + " to MQTT")
     mqtt_send(config['mqtt']['prefix'] + '/cec/' + str(device_id), power, True)
 
 
