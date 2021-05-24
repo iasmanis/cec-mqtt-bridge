@@ -21,37 +21,49 @@ config = {
     },
     'cec': {
         'enabled': 0,
-        'id': 1,
         'port': 'RPI',
         'devices': '0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15',
     }
 }
 
-
 def mqtt_send(topic, value, retain=False):
     mqtt_client.publish(topic, value, retain=retain)
 
-
 def cec_on_keypress(key, duration):
-    print("[key pressed] " + str(key) + ", "+ str(duration))
+    print("CEC_KEYPRESS: " + str(key) + ", "+ str(duration))
     return 0
 
-
 def cec_command_callback(cmd):
-    print("CEC RX: " + str(cmd))
+    print("CEC_RX: " + str(cmd))
 
-    # if cmd == ">> 05:c3":
-    #     print("CCC: request ARC start (C3)")
-    #     # This will never work as the response is sent after
-        # local libcec response buffer is processed, so there is a mixup with order and states
-        # print("CCC: Reporting ARC started (C1)")
-        # cec_send("50:C1")
-        # return 1
+    # Report Power Status
+    # TV (0) -> Broadcast (F): standby (36)
+    m = re.search('>> ([0-9a-f])[0-9a-f]:36', cmd)
+    if m:
+        handlePowerReport(int(m.group(1), 16), 'off')
+
+    # TV (0) -> Broadcast (F): report physical address (84)
+    m = re.search('>> ([0-9a-f])[0-9a-f]:84', cmd)
+    if m:
+        handlePowerReport(int(m.group(1), 16), 'on')
+
+    # TODO: Move to keypress callback
+    # volume up / down key press
+    m = re.search('>> [0-9a-f]{2}:44:([0-9a-f]{2})', message)
+    if m:
+        handleKeyPress(m.group(1))
+        return 0
+
+    # volume up / down key release
+    # m = re.search('>> [0-9a-f]{2}:8b:([0-9a-f]{2})', message)
+    # if m:
+    #     handleKeyRelease(m.group(1))
+    #     return 0
 
     return 0
 
 def cec_alert_callback(alert, param):
-    print("CEC ALERT: " + str(alert) + ", " + str(param))
+    print("CEC_ALERT: " + str(alert) + ", " + str(param))
 
 def cec_on_message(level, time, message):
     if level == cec.CEC_LOG_ERROR:
@@ -74,24 +86,7 @@ def cec_on_message(level, time, message):
 
         m = re.search('<< ([0-9a-f:]+)', message)
         if m:
-            print("CEC TX: %s" % m.group(1))
-
-        # m = re.search('>> 05:c3', message)
-        # if m:
-        #     print("request ARC start (C3)")
-        #     print("Reporting ARC started (C1)")
-        #     cec_send("50:C1")
-
-        # TODO: Move to command callback
-        m = re.search('>> [0-9a-f]{2}:44:([0-9a-f]{2})', message)
-        if m:
-            handleKeyPress(m.group(1))
-            return 0
-
-        m = re.search('>> [0-9a-f]{2}:8b:([0-9a-f]{2})', message)
-        if m:
-            handleKeyRelease(m.group(1))
-            return 0
+            print("CEC_TX: %s" % m.group(1))
 
     return 0
 
@@ -102,7 +97,6 @@ def cec_send(cmd, id=None):
     else:
         cec_client.Transmit(cec_client.CommandFromString(
             '1%s:%s' % (hex(id)[2:], cmd)))
-
 
 def translateKey(key):
     localKey = None
@@ -116,15 +110,19 @@ def translateKey(key):
 
     return localKey
 
-
 def handleKeyPress(key):
     remoteKey = translateKey(key)
 
     if remoteKey == None:
         return
 
-    print("Sending key press " + remoteKey + " to MQTT")
+    print("MQTT: Sending key press " + remoteKey + " to MQTT")
     mqtt_send(config['mqtt']['prefix'] + '/cec/' + remoteKey, 'on', True)
+
+
+def handlePowerReport(device_id, power):
+    # TODO: Filter out only monitored devices
+    mqtt_send(config['mqtt']['prefix'] + '/cec/' + str(device_id), power, True)
 
 
 def handleKeyRelease(key):
@@ -133,7 +131,7 @@ def handleKeyRelease(key):
     if remoteKey == None:
         return
 
-    print("Sending key release " + remoteKey + " to MQTT")
+    print("MQTT: Sending key release " + remoteKey + " to MQTT")
     mqtt_send(config['mqtt']['prefix'] + '/cec/' + remoteKey, 'off', True)
 
 
@@ -217,6 +215,7 @@ try:
     if config['mqtt']['user']:
         mqtt_client.username_pw_set(
             config['mqtt']['user'], password=config['mqtt']['password'])
+
     mqtt_client.connect(config['mqtt']['broker'],
                         int(config['mqtt']['port']), 60)
     mqtt_client.loop_start()
