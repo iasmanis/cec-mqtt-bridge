@@ -23,7 +23,7 @@ RUN cd /root \
     && make install
 
 # To allow partial caching during rebuild
-ENV LIBCEC_BUILD=4
+ENV LIBCEC_BUILD=10
 
 # HDMI-ARC specific support library
 RUN apt-get -y update \
