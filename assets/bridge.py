@@ -166,18 +166,12 @@ try:
     ### Parse config ###
     killer = GracefulKiller()
     try:
-        Config = ConfigParser.SafeConfigParser()
-        if Config.read("/home/pi/scripts/config.ini"):
-
-            # Load all sections and overwrite default configuration
-            for section in Config.sections():
-                config[section].update(dict(Config.items(section)))
-
         # Environment variables
         for section in config:
             for key, value in config[section].items():
                 env = os.getenv(section.upper() + '_' + key.upper())
                 if env:
+                    print("DEBUG: Loaded " + section + '/' + key + ' = ' + str(type(value)(env)))
                     config[section][key] = type(value)(env)
 
         # Do some checks
