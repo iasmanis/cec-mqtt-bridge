@@ -22,6 +22,9 @@ RUN cd /root \
     && make \
     && make install
 
+# To allow partial caching during rebuild
+ENV LIBCEC_BUILD=4
+
 # HDMI-ARC specific support library
 RUN apt-get -y update \
     && apt-get -y install git \
@@ -29,7 +32,9 @@ RUN apt-get -y update \
     && git clone https://github.com/iasmanis/libcec.git \
     && cd libcec \
     && git checkout hdmi-arc \
+    && git pull \
     && git archive --format=tar.gz -o /root/libcec.tar.gz HEAD \
+    && git log --pretty=format:'%h : %s' --graph > /root/LIBCEC-CHANGELOG \
     && rm -rf /root/libcec \
     && apt-get -y purge git
 
@@ -70,6 +75,7 @@ RUN apt-get -y update \
 COPY --from=builder /usr/local/lib/python3.6/site-packages /usr/local/lib/python3.6/site-packages
 COPY --from=builder /opt/vc/lib /usr/lib/arm-linux-gnueabihf/
 COPY --from=builder /opt/libcec /
+COPY --from=builder /root/LIBCEC-CHANGELOG /root/LIBCEC-CHANGELOG
 
 WORKDIR /app
 
