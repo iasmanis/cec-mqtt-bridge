@@ -74,6 +74,12 @@ The bridge publishes to the following topics:
 
 `id` is the address (0-15) of the device on the CEC-bus.
 
+
+## Some notes
+
+* To avoid TV turning on every RPI restart diable TV service on RPI with command `tvservice --off`
+* To debug MQTT use command `docker run --rm -it --entrypoint mosquitto_sub jllopis/mosquitto:v1.6.9 -u user -P pass -v -d -h 192.168.0.2 -p 1883 -t 'media/#`, where media is the prefix used for CEC topics
+
 ## Interesting links
 
 * [https://github.com/nvella/mqtt-cec](https://github.com/nvella/mqtt-cec)
