@@ -19,9 +19,7 @@ docker run -d --privileged \
     -e MQTT_USER="${MQTT_USER}" \
     -e MQTT_PASSWORD="${MQTT_PASSWORD}" \
     -e CEC_ENABLED="${CEC_ENABLED}" \
-    -e CEC_ID="${CEC_ID}" \
     -e CEC_PORT="${CEC_PORT}" \
-    -e IR_ENABLED="${IR_ENABLED}" \
     -e CEC_DEVICES="${CEC_DEVICES}" \
     -v "$(pwd)/assets/bridge.py:/app/bridge.py:ro" \
     ingemars/mqtt-audio-controller > /dev/null
