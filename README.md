@@ -9,7 +9,7 @@ are no keypress commands sent over HDMI-CEC. This container image solves this by
 system (a soundbar), that connects to TV using single HDMI cable. TV has to be configured to use a HDMI sound system and Raspberry PI must be connected to HDMI port supporting HDMI ARC.
 
 Toslink audio output typically remains
-active whatever the configuration on TV, that allows amplifier to function, while Raspberry Pi reads control signals and remote keypresses from HDMI cable
+active whatever the configuration on TV allowing amplifier to function, while Raspberry Pi reads control signals and remote keypresses from HDMI cable
 using CEC protocol.
 
 This runs as docker container on Raspberry Pi and uses a patched libcec to support ARC signalling protocol.
