@@ -45,11 +45,11 @@ docker run -d --privileged \
 * MQTT_BROKER - IP address / hostname of MQTT broker
 * MQTT_PORT -  MQTT broker port, typically "1883"
 * MQTT_PREFIX - prefix for MQTT topic
-* MQTT_USER - MQTT password as registerewd with broker
-* MQTT_PASSWORD - MQTT password as registerewd with broker
+* MQTT_USER - MQTT password as registered with broker
+* MQTT_PASSWORD - MQTT password as registered with broker
 * CEC_ENABLED - set to "1" to enable CEC
 * CEC_PORT - HDMI port to use, "RPI" on Raspberry Pi
-* CEC_DEVICES - comma seperated device IDs on CEC bus to query and report status
+* CEC_DEVICES - comma separated device IDs on CEC bus to query and report status
 
 ## MQTT Topics
 
