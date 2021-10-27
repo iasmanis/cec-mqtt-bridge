@@ -65,6 +65,7 @@ def mqtt_on_message(client, userdata, message):
                 action = message.payload.decode()
 
                 if action == 'on':
+                    # Not supported on my TV
                     id = int(split[1])
                     cec_send('44:6D', id=id)
                     mqtt_send(config['mqtt']['prefix'] +
