@@ -73,7 +73,7 @@ def mqtt_on_message(client, userdata, message):
 
                 if action == 'off':
                     id = int(split[1])
-                    cec_send('36', id=id)
+                    cec_send('44:6C', id=id)
                     mqtt_send(config['mqtt']['prefix'] +
                               '/cec/' + str(id), 'off', True)
                     return
@@ -151,7 +151,7 @@ def cec_send(cmd, id=None):
         cec_client.Transmit(cec_client.CommandFromString(cmd))
     else:
         cec_client.Transmit(cec_client.CommandFromString(
-            '1%s:%s' % (hex(id)[2:], cmd)))
+            '5%s:%s' % (hex(id)[2:], cmd)))
 
 
 def translate_key(key):
