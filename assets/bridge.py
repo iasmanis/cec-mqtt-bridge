@@ -26,17 +26,78 @@ config = {
     }
 }
 
+
+def mqtt_on_connect(client, userdata, rc):
+    """@type client: paho.mqtt.client """
+
+    print("MQTT: connection returned result: "+str(rc))
+
+    # Subscribe to CEC commands
+    if int(config['cec']['enabled']) == 1:
+        client.subscribe([
+            (config['mqtt']['prefix'] + '/cec/cmd', 0),
+            (config['mqtt']['prefix'] + '/cec/+/cmd', 0),
+            (config['mqtt']['prefix'] + '/cec/tx', 0)
+        ])
+
+
+def mqtt_on_message(client, userdata, message):
+    """@type client: paho.mqtt.client """
+
+    try:
+        # Decode topic
+        cmd = message.topic.replace(config['mqtt']['prefix'], '').strip('/')
+        print("MQTT: command received: %s (%s)" % (cmd, message.payload))
+
+        split = cmd.split('/')
+
+        if split[0] == 'cec':
+
+            if split[1] == 'tx':
+                commands = message.payload.decode().split(',')
+                for command in commands:
+                    print(" Sending raw: %s" % command)
+                    cec_send(command)
+                return
+
+            if split[2] == 'cmd':
+
+                action = message.payload.decode()
+
+                if action == 'on':
+                    id = int(split[1])
+                    cec_send('44:6D', id=id)
+                    mqtt_send(config['mqtt']['prefix'] +
+                              '/cec/' + str(id), 'on', True)
+                    return
+
+                if action == 'off':
+                    id = int(split[1])
+                    cec_send('36', id=id)
+                    mqtt_send(config['mqtt']['prefix'] +
+                              '/cec/' + str(id), 'off', True)
+                    return
+
+                raise Exception("Unknown command (%s)" % action)
+
+    except Exception as e:
+        print("MQTT: Error during processing of MQQT message: ",
+              message.topic, message.payload, str(e))
+
+
 def mqtt_send(topic, value, retain=False):
     mqtt_client.publish(topic, value, retain=retain)
 
+
 def cec_on_keypress(key, duration):
-    print("CEC_KEYPRESS: " + str(key) + ", "+ str(duration))
+    print("CEC_KEYPRESS: " + str(key) + ", " + str(duration))
 
     if (duration == 0):
         # This is a keypress down
-        handleKeyPress(key)
+        handle_key_press(key)
 
     return 0
+
 
 def cec_command_callback(cmd):
     print("CEC_RX: " + str(cmd))
@@ -45,17 +106,19 @@ def cec_command_callback(cmd):
     # TV (0) -> Broadcast (F): standby (36)
     m = re.search('>> ([0-9a-f])[0-9a-f]:36', cmd)
     if m:
-        handlePowerReport(int(m.group(1), 16), 'off')
+        handle_power_report(int(m.group(1), 16), 'off')
 
     # TV (0) -> Broadcast (F): report physical address (84)
     m = re.search('>> ([0-9a-f])[0-9a-f]:84', cmd)
     if m:
-        handlePowerReport(int(m.group(1), 16), 'on')
+        handle_power_report(int(m.group(1), 16), 'on')
 
     return 0
 
+
 def cec_alert_callback(alert, param):
     print("CEC_ALERT: " + str(alert) + ", " + str(param))
+
 
 def cec_on_message(level, time, message):
     if level == cec.CEC_LOG_ERROR:
@@ -90,7 +153,8 @@ def cec_send(cmd, id=None):
         cec_client.Transmit(cec_client.CommandFromString(
             '1%s:%s' % (hex(id)[2:], cmd)))
 
-def translateKey(key):
+
+def translate_key(key):
     localKey = None
 
     if key == 65:
@@ -102,8 +166,9 @@ def translateKey(key):
 
     return localKey
 
-def handleKeyPress(key):
-    remoteKey = translateKey(key)
+
+def handle_key_press(key):
+    remoteKey = translate_key(key)
 
     if remoteKey == None:
         return
@@ -112,14 +177,15 @@ def handleKeyPress(key):
     mqtt_send(config['mqtt']['prefix'] + '/cec/' + remoteKey, 'on', True)
 
 
-def handlePowerReport(device_id, power):
+def handle_power_report(device_id, power):
     # TODO: Filter out only monitored devices
-    print("MQTT: Sending power state of " + str(device_id) + " " + power + " to MQTT")
+    print("MQTT: Sending power state of " +
+          str(device_id) + " " + power + " to MQTT")
     mqtt_send(config['mqtt']['prefix'] + '/cec/' + str(device_id), power, True)
 
 
-def handleKeyRelease(key):
-    remoteKey = translateKey(key)
+def handle_key_release(key):
+    remoteKey = translate_key(key)
 
     if remoteKey == None:
         return
@@ -162,7 +228,8 @@ try:
             for key, value in config[section].items():
                 env = os.getenv(section.upper() + '_' + key.upper())
                 if env:
-                    print("DEBUG: Loaded " + section + '/' + key + ' = ' + str(type(value)(env)))
+                    print("DEBUG: Loaded " + section + '/' +
+                          key + ' = ' + str(type(value)(env)))
                     config[section][key] = type(value)(env)
 
         # Do some checks
@@ -204,7 +271,11 @@ try:
 
     ### Setup MQTT ###
     print("Initialising MQTT...")
-    mqtt_client = mqtt.Client("cec-ir-mqtt")
+    mqtt_client = mqtt.Client("cec-mqtt-bridge")
+
+    mqtt_client.on_connect = mqtt_on_connect
+    mqtt_client.on_message = mqtt_on_message
+
     if config['mqtt']['user']:
         mqtt_client.username_pw_set(
             config['mqtt']['user'], password=config['mqtt']['password'])

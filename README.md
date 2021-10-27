@@ -53,15 +53,12 @@ docker run -d --privileged \
 
 ## MQTT Topics
 
-<!--
 The bridge subscribes to the following topics:
 
 | topic                   | body                                    | remark                                           |
 |:------------------------|-----------------------------------------|--------------------------------------------------|
 | `prefix`/cec/`id`/cmd   | `on` / `off`                            | Turn on/off device with id `id`.                 |
-| `prefix`/cec/cmd        | `mute` / `unmute` / `voldown` / `volup` | Sends the specified command to the audio system. |
-| `prefix`/cec/tx         | `commands`                              | Send the specified `commands` to the CEC bus. You can specify multiple commands by separating them with a space. Example: `cec/tx 15:44:41,15:45`. |
-| `prefix`/ir/`remote`/tx | `key`                                   | Send the specified `key` of `remote` to the IR transmitter. | -->
+| `prefix`/cec/tx         | `commands`                              | Send the specified `commands` to the CEC bus. You can specify multiple commands by separating them with a comma. Example: `cec/tx 15:44:41,15:45`. |
 
 The bridge publishes to the following topics:
 
