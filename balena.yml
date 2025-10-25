@@ -1,0 +1,4 @@
+name: cec-mqtt-bridge
+description: HDMI CEC MQTT bridge with ARC support
+version: 0.2.2
+type: sw.application
